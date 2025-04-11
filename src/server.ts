@@ -1,4 +1,5 @@
 import Fastify from "fastify";
+import cors from "@fastify/cors";
 import swagger from "@fastify/swagger";
 import swaggerUI from "@fastify/swagger-ui";
 import donationsRoutes from "./routes/donations";
@@ -7,8 +8,13 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const PORT = Number(process.env.PORT) || 3001;
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
 
 const fastify = Fastify({ logger: true });
+
+fastify.register(cors, {
+  origin: FRONTEND_URL,
+});
 
 fastify.register(swagger, {
   openapi: {
