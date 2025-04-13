@@ -1,6 +1,8 @@
 // service 的責任只有：接收乾淨的資料（純變數，不包含 HTTP 或框架物件）、根據業務邏輯處理資料、不包含參數驗證、錯誤回傳格式、HTTP 狀態碼等與框架有關的處理
 // 保持與框架（Fastify、Express）無關，確保可被單元測試與複用
 
+import { buildPagination, buildSearchClause } from "../helpers/sqlHelpers";
+
 export const getDonationList = async (
   client: any,
   {
@@ -77,13 +79,12 @@ const queryDonationsWithoutCategory = async ({
 
   const params: Array<any> = [type];
 
-  // 當有 search 條件時，加入額外的搜尋條件（搭配參數占位符機制，避免 SQL Injection）
-  if (search) {
-    sql += ` AND (d.name ILIKE '%' || $${params.length + 1} || '%')`;
-    params.push(search);
-  }
+  sql += buildSearchClause(params, search);
 
-  sql += ` GROUP BY d.id `;
+  sql += `
+  GROUP BY d.id
+  ORDER BY d.id ASC
+  `;
   sql += buildPagination(params, limit, offset);
 
   return await client.query(sql, params);
@@ -118,11 +119,11 @@ const queryDonationsWithCategory = async ({
 
   const params: Array<any> = [type, categoryId];
 
-  if (search) {
-    sql += ` AND (d.name ILIKE '%' || $${params.length + 1} || '%')`;
-    params.push(search);
-  }
+  sql += buildSearchClause(params, search);
 
+  sql += `
+  ORDER BY d.id ASC
+  `;
   sql += buildPagination(params, limit, offset);
 
   return await client.query(sql, params);
@@ -144,10 +145,8 @@ const countDonationsWithoutCategory = async ({
   `;
   const params: any[] = [type];
 
-  if (search) {
-    sql += ` AND (d.name ILIKE '%' || $${params.length + 1} || '%')`;
-    params.push(search);
-  }
+  sql += buildSearchClause(params, search);
+
   return await client.query(sql, params);
 };
 
@@ -172,19 +171,7 @@ const countDonationsWithCategory = async ({
   `;
   const params: any[] = [type, categoryId];
 
-  if (search) {
-    sql += ` AND (d.name ILIKE '%' || $${params.length + 1} || '%')`;
-    params.push(search);
-  }
-  return await client.query(sql, params);
-};
+  sql += buildSearchClause(params, search);
 
-// helper 函式：只負責組裝 LIMIT/OFFSET 部分
-const buildPagination = (params: any[], limit: number, offset: number) => {
-  // LIMIT/OFFSET 必須放在查詢尾部
-  const paginationClause = ` LIMIT $${params.length + 1} OFFSET $${
-    params.length + 2
-  }`;
-  params.push(limit, offset);
-  return paginationClause;
+  return await client.query(sql, params);
 };
