@@ -26,10 +26,10 @@ export const getDonationListHandler = async (
   try {
     const result = await getDonationList(client, {
       type,
-      categoryId: Number(category),
+      categoryId: category,
       search,
-      page: Number(page) || 1,
-      limit: Number(limit) || 10,
+      page,
+      limit,
     });
 
     return reply.send(result);
