@@ -7,12 +7,15 @@
     "dev": "nodemon src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "seed": "ts-node src/db/seed.ts"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@fastify/cors": "^11.0.1",
+    "@fastify/postgres": "^6.0.2",
     "@fastify/swagger": "^9.4.2",
     "@fastify/swagger-ui": "^5.2.2",
     "dotenv": "^16.4.7",
@@ -21,6 +24,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.13.14",
+    "@types/pg": "^8.11.11",
     "nodemon": "^3.1.9",
     "ts-node": "^10.9.2",
     "tsx": "^4.19.3",
