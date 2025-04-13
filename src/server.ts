@@ -37,7 +37,7 @@ fastify.register(swaggerUI, {
   },
 });
 
-fastify.register(donationsRoutes, { prefix: "/donations" });
+fastify.register(donationsRoutes, { prefix: "/api/donations" });
 
 const start = async () => {
   try {

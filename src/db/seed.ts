@@ -27,66 +27,128 @@ const seedDatabase = async () => {
     `);
     console.log("Seeded categories successfully.");
 
+    const totalEntities = 180;
+    const donationEntitiesValues: string[] = [];
+    const donationEntityTypes: string[] = [];
+
     // 建立 donation_entities
-    await pool.query(`
+    for (let i = 0; i < totalEntities; i++) {
+      let type = "";
+
+      let name = "";
+      if (i % 3 === 0) {
+        type = "group";
+        name = `公益團體 ${i + 1}`;
+      } else if (i % 3 === 1) {
+        type = "project";
+        name = `募資專案 ${i + 1}`;
+      } else {
+        type = "product";
+        name = `義賣商品 ${i + 1}`;
+      }
+
+      donationEntityTypes.push(type);
+
+      const description = `${name} 的描述`;
+      const image_url = `https://example.com/image${i + 1}`;
+
+      // 注意：若 name、description 中可能含有單引號，實際環境需做轉義
+      donationEntitiesValues.push(
+        `('${name}', '${type}', '${description}', '${image_url}')`
+      );
+    }
+
+    const donationEntitiesQuery = `
       INSERT INTO donation_entities (name, type, description, image_url)
-      VALUES
-        -- groups
-        ('公益團體 A', 'group', '幫助弱勢族群的團體', 'https://example.com/image1'),
-        ('公益團體 D', 'group', '提供心理輔導資源', 'https://example.com/image4'),
-        ('公益團體 G', 'group', '照顧街友與遊民', 'https://example.com/image5'),
+      VALUES ${donationEntitiesValues.join(", ")};
+    `;
+    await pool.query(donationEntitiesQuery);
+    console.log(
+      `Seeded donation_entities successfully with ${totalEntities} rows.`
+    );
 
-        -- projects
-        ('募資專案 B', 'project', '提供偏鄉教育資源', 'https://example.com/image2'),
-        ('募資專案 E', 'project', '捐助癌症兒童治療', 'https://example.com/image6'),
-        ('募資專案 H', 'project', '支持再生能源推廣', 'https://example.com/image7'),
-
-        -- products
-        ('義賣商品 C', 'product', '限量T-shirt 支持活動', 'https://example.com/image3'),
-        ('義賣商品 F', 'product', '環保水壺義賣', 'https://example.com/image8'),
-        ('義賣商品 I', 'product', '愛心手作餅乾', 'https://example.com/image9');
-
-    `);
-
-    await pool.query(`
+    const donationEntitiesCategoriesValues: string[] = [];
+    for (let i = 0; i < totalEntities; i++) {
+      const entityId = i + 1;
+      const type = donationEntityTypes[i];
+      if (type === "group") {
+        donationEntitiesCategoriesValues.push(`(${entityId}, 1)`);
+        donationEntitiesCategoriesValues.push(`(${entityId}, 2)`);
+      } else if (type === "project") {
+        donationEntitiesCategoriesValues.push(`(${entityId}, 3)`);
+        donationEntitiesCategoriesValues.push(`(${entityId}, 4)`);
+      } else if (type === "product") {
+        donationEntitiesCategoriesValues.push(`(${entityId}, 5)`);
+      }
+    }
+    const donationEntitiesCategoriesQuery = `
       INSERT INTO donation_entities_categories (donation_entities_id, category_id)
-      VALUES
-        (1, 1), (1, 2),
-        (2, 4),
-        (3, 5),
-        
-        (4, 1),
-        (5, 2),
-        (6, 3), (6, 5),
-        
-        (7, 3), (7, 5),
-        (8, 3),
-        (9, 5);
-    `);
+      VALUES ${donationEntitiesCategoriesValues.join(", ")};
+    `;
+    await pool.query(donationEntitiesCategoriesQuery);
+    console.log("Seeded donation_entities_categories successfully.");
 
-    await pool.query(`
-      INSERT INTO donation_groups (entity_id, registration_number, website_url)
-      VALUES 
-        (1, 'AB12345678', 'https://group-a.org'),
-        (2, 'CD87654321', 'https://group-d.org'),
-        (3, 'EF19283746', 'https://group-g.org');
-    `);
+    const donationGroupsValues: string[] = [];
+    for (let i = 0; i < totalEntities; i++) {
+      if (donationEntityTypes[i] === "group") {
+        const entityId = i + 1;
+        const registration_number = `RG${entityId.toString().padStart(4, "0")}`;
+        const website_url = `https://group${entityId}.org`;
+        donationGroupsValues.push(
+          `(${entityId}, '${registration_number}', '${website_url}')`
+        );
+      }
+    }
+    if (donationGroupsValues.length > 0) {
+      const donationGroupsQuery = `
+        INSERT INTO donation_groups (entity_id, registration_number, website_url)
+        VALUES ${donationGroupsValues.join(", ")};
+      `;
+      await pool.query(donationGroupsQuery);
+      console.log("Seeded donation_groups successfully.");
+    }
 
-    await pool.query(`
-      INSERT INTO donation_projects (entity_id, goal_amount, end_date)
-      VALUES 
-        (4, 500000, '2025-12-31'),
-        (5, 800000, '2026-01-15'),
-        (6, 300000, '2025-10-10');
-    `);
+    const donationProjectsValues: string[] = [];
+    for (let i = 0; i < totalEntities; i++) {
+      if (donationEntityTypes[i] === "project") {
+        const entityId = i + 1;
+        // 模擬募資目標額：介於 100,000 至 1,000,000 之間
+        const goal_amount =
+          Math.floor(Math.random() * (1000000 - 100000 + 1)) + 100000;
+        // 固定結束日期
+        const end_date = "2025-12-31";
+        donationProjectsValues.push(
+          `(${entityId}, ${goal_amount}, '${end_date}')`
+        );
+      }
+    }
+    if (donationProjectsValues.length > 0) {
+      const donationProjectsQuery = `
+        INSERT INTO donation_projects (entity_id, goal_amount, end_date)
+        VALUES ${donationProjectsValues.join(", ")};
+      `;
+      await pool.query(donationProjectsQuery);
+      console.log("Seeded donation_projects successfully.");
+    }
 
-    await pool.query(`
-      INSERT INTO donation_products (entity_id, price, stock)
-      VALUES 
-        (7, 499, 50),
-        (8, 299, 120),
-        (9, 150, 80);
-    `);
+    const donationProductsValues: string[] = [];
+    for (let i = 0; i < totalEntities; i++) {
+      if (donationEntityTypes[i] === "product") {
+        const entityId = i + 1;
+        // 模擬價格：介於 50 至 1000，庫存介於 10 至 200
+        const price = Math.floor(Math.random() * (1000 - 50 + 1)) + 50;
+        const stock = Math.floor(Math.random() * (200 - 10 + 1)) + 10;
+        donationProductsValues.push(`(${entityId}, ${price}, ${stock})`);
+      }
+    }
+    if (donationProductsValues.length > 0) {
+      const donationProductsQuery = `
+        INSERT INTO donation_products (entity_id, price, stock)
+        VALUES ${donationProductsValues.join(", ")};
+      `;
+      await pool.query(donationProductsQuery);
+      console.log("Seeded donation_products successfully.");
+    }
 
     console.log("Database seeded successfully!");
   } catch (err) {
