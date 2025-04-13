@@ -5,33 +5,44 @@ import { pool } from "../config/db";
 
 export const getDonationList = async ({
   type,
-  category,
+  categoryId,
   search,
   page,
   limit,
 }: {
   type: string;
-  category?: string;
+  categoryId?: number;
   search?: string;
   page: number;
   limit: number;
 }) => {
-  // const limit = Number(request.query.limit) || 10;
-  // const page = Number(request.query.page) || 1;
+  const offset = (page - 1) * limit;
 
-  let result;
-  if (category) {
-    result = await queryDonationsWithCategory({ type, category });
-  } else {
-    result = await queryDonationsWithoutCategory({ type });
-  }
+  const result = categoryId
+    ? await queryDonationsWithCategory({
+        type,
+        categoryId,
+        search,
+        limit,
+        offset,
+      })
+    : await queryDonationsWithoutCategory({ type, search, limit, offset });
 
   return result.rows;
 };
 
-const queryDonationsWithoutCategory = async ({ type }: { type: string }) => {
-  return await pool.query(
-    `SELECT
+const queryDonationsWithoutCategory = async ({
+  type,
+  search,
+  limit,
+  offset,
+}: {
+  type: string;
+  search?: string;
+  limit: number;
+  offset: number;
+}) => {
+  let sql = `SELECT
       d.*,
       ARRAY_AGG(dc.category_id) AS category_ids
     FROM
@@ -40,30 +51,65 @@ const queryDonationsWithoutCategory = async ({ type }: { type: string }) => {
       donation_entities_categories dc ON d.id = dc.donation_entities_id
     WHERE
       d.type = $1
-    GROUP BY
-      d.id;`,
-    [type]
-  );
+    `;
+
+  const params: Array<any> = [type];
+
+  // 當有 search 條件時，加入額外的搜尋條件（搭配參數占位符機制，避免 SQL Injection）
+  if (search) {
+    sql += ` AND (d.name ILIKE '%' || $${params.length + 1} || '%')`;
+    params.push(search);
+  }
+
+  sql += `
+  GROUP BY
+    d.id
+  LIMIT $${params.length + 1}
+  OFFSET $${params.length + 2};
+`;
+
+  params.push(limit, offset);
+
+  return await pool.query(sql, params);
 };
 
 const queryDonationsWithCategory = async ({
   type,
-  category,
+  categoryId,
+  search,
+  limit,
+  offset,
 }: {
   type: string;
-  category: string;
+  categoryId: number;
+  search?: string;
+  limit: number;
+  offset: number;
 }) => {
-  return await pool.query(
-    `SELECT 
+  let sql = `SELECT 
       DISTINCT d.*
     FROM 
       donation_entities d
-    -- 第一次 INNER JOIN 是為了篩選符合 category 的 entity
+    -- INNER JOIN 是為了篩選符合 category 的 entity
     INNER JOIN donation_entities_categories dc_filter
       ON d.id = dc_filter.donation_entities_id
-      AND (dc_filter.category_id = $2::int)
+      AND (dc_filter.category_id = $2)
     WHERE
-      d.type = $1`,
-    [type, category]
-  );
+      d.type = $1
+  `;
+
+  const params: Array<any> = [type, categoryId];
+
+  if (search) {
+    sql += ` AND (d.name ILIKE '%' || $${params.length + 1} || '%')`;
+    params.push(search);
+  }
+
+  sql += `
+  LIMIT $${params.length + 1}
+  OFFSET $${params.length + 2};
+`;
+  params.push(limit, offset);
+
+  return await pool.query(sql, params);
 };

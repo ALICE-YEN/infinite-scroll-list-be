@@ -7,7 +7,7 @@ export const getDonationListHandler = async (
   request: FastifyRequest<{
     Querystring: {
       type: string;
-      category?: string;
+      category?: number;
       search?: string;
       page: number;
       limit: number;
@@ -21,7 +21,13 @@ export const getDonationListHandler = async (
     return reply.status(400).send({ error: "type is required" });
   }
 
-  const result = await getDonationList({ type, category, search, page, limit });
+  const result = await getDonationList({
+    type,
+    categoryId: Number(category),
+    search,
+    page: Number(page) || 1,
+    limit: Number(limit) || 10,
+  });
 
   return reply.send(result);
 };
