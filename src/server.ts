@@ -1,5 +1,6 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
+import fastifyPostgres from "@fastify/postgres";
 import swagger from "@fastify/swagger";
 import swaggerUI from "@fastify/swagger-ui";
 import donationsRoutes from "./routes/donations";
@@ -14,6 +15,10 @@ const fastify = Fastify({ logger: true });
 
 fastify.register(cors, {
   origin: FRONTEND_URL,
+});
+
+fastify.register(fastifyPostgres, {
+  connectionString: process.env.DATABASE_URL,
 });
 
 fastify.register(swagger, {
