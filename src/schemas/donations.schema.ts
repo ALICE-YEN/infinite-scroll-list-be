@@ -18,38 +18,52 @@ export const getDonationListSchema = {
   },
   response: {
     200: {
-      type: "array",
-      items: {
-        type: "object",
-        properties: {
-          id: { type: "number", description: "ID" },
-          name: { type: "string", description: "名稱" },
-          type: {
-            type: "string",
-            description: "捐款類型",
-            enum: ["group", "project", "product"],
-          },
-          description: { type: "string", description: "描述" },
-          image_url: { type: "string", description: "圖片 URL" },
-          created_at: {
-            type: "string",
-            format: "date-time",
-            description: "建立時間",
-          },
-          updated_at: {
-            type: "string",
-            format: "date-time",
-            description: "更新時間",
-          },
-          // 如果仍需回傳 category_ids：
-          category_ids: {
-            type: "array",
-            items: { type: "number" },
-            description: "相關分類 ID 陣列",
+      properties: {
+        data: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              id: { type: "number", description: "ID" },
+              name: { type: "string", description: "名稱" },
+              type: {
+                type: "string",
+                description: "捐款類型",
+                enum: ["group", "project", "product"],
+              },
+              description: { type: "string", description: "描述" },
+              image_url: { type: "string", description: "圖片 URL" },
+              created_at: {
+                type: "string",
+                format: "date-time",
+                description: "建立時間",
+              },
+              updated_at: {
+                type: "string",
+                format: "date-time",
+                description: "更新時間",
+              },
+              // 如果仍需回傳 category_ids：
+              category_ids: {
+                type: "array",
+                items: { type: "number" },
+                description: "相關分類 ID 陣列",
+              },
+            },
+            required: ["id", "name", "type", "created_at", "updated_at"],
           },
         },
-        required: ["id", "name", "type", "created_at", "updated_at"],
+        meta: {
+          type: "object",
+          properties: {
+            page: { type: "number", description: "當前頁數" },
+            limit: { type: "number", description: "每頁筆數" },
+            total: { type: "number", description: "符合條件的總筆數" },
+          },
+          required: ["page", "limit", "total"],
+        },
       },
+      required: ["data", "meta"],
     },
     400: {
       type: "object",

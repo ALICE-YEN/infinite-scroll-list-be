@@ -19,7 +19,7 @@ export const getDonationList = async (
 ) => {
   const offset = (page - 1) * limit;
 
-  const result = categoryId
+  const dataResult = categoryId
     ? await queryDonationsWithCategory({
         client,
         type,
@@ -36,7 +36,19 @@ export const getDonationList = async (
         offset,
       });
 
-  return result.rows;
+  const countResult = categoryId
+    ? await countDonationsWithCategory({ client, type, categoryId, search })
+    : await countDonationsWithoutCategory({ client, type, search });
+  const total = Number(countResult.rows[0]?.total || 0);
+
+  return {
+    data: dataResult.rows,
+    meta: {
+      page,
+      limit,
+      total,
+    },
+  };
 };
 
 const queryDonationsWithoutCategory = async ({
@@ -71,14 +83,8 @@ const queryDonationsWithoutCategory = async ({
     params.push(search);
   }
 
-  sql += `
-  GROUP BY
-    d.id
-  LIMIT $${params.length + 1}
-  OFFSET $${params.length + 2};
-`;
-
-  params.push(limit, offset);
+  sql += ` GROUP BY d.id `;
+  sql += buildPagination(params, limit, offset);
 
   return await client.query(sql, params);
 };
@@ -105,7 +111,7 @@ const queryDonationsWithCategory = async ({
     -- INNER JOIN 是為了篩選符合 category 的 entity
     INNER JOIN donation_entities_categories dc_filter
       ON d.id = dc_filter.donation_entities_id
-      AND (dc_filter.category_id = $2)
+      AND dc_filter.category_id = $2
     WHERE
       d.type = $1
   `;
@@ -117,11 +123,68 @@ const queryDonationsWithCategory = async ({
     params.push(search);
   }
 
-  sql += `
-  LIMIT $${params.length + 1}
-  OFFSET $${params.length + 2};
-`;
-  params.push(limit, offset);
+  sql += buildPagination(params, limit, offset);
 
   return await client.query(sql, params);
+};
+
+const countDonationsWithoutCategory = async ({
+  client,
+  type,
+  search,
+}: {
+  client: any;
+  type: string;
+  search?: string;
+}) => {
+  let sql = `
+    SELECT COUNT(DISTINCT d.id) AS total
+    FROM donation_entities d
+    WHERE d.type = $1
+  `;
+  const params: any[] = [type];
+
+  if (search) {
+    sql += ` AND (d.name ILIKE '%' || $${params.length + 1} || '%')`;
+    params.push(search);
+  }
+  return await client.query(sql, params);
+};
+
+const countDonationsWithCategory = async ({
+  client,
+  type,
+  categoryId,
+  search,
+}: {
+  client: any;
+  type: string;
+  categoryId: number;
+  search?: string;
+}) => {
+  let sql = `
+    SELECT COUNT(DISTINCT d.id) AS total
+    FROM donation_entities d
+    INNER JOIN donation_entities_categories dc_filter
+      ON d.id = dc_filter.donation_entities_id
+      AND dc_filter.category_id = $2
+    WHERE d.type = $1
+  `;
+  const params: any[] = [type, categoryId];
+
+  if (search) {
+    sql += ` AND (d.name ILIKE '%' || $${params.length + 1} || '%')`;
+    params.push(search);
+  }
+  return await client.query(sql, params);
+};
+
+// helper 函式：只負責組裝 LIMIT/OFFSET 部分
+const buildPagination = (params: any[], limit: number, offset: number) => {
+  // LIMIT/OFFSET 必須放在查詢尾部
+  const paginationClause = ` LIMIT $${params.length + 1} OFFSET $${
+    params.length + 2
+  }`;
+  params.push(limit, offset);
+  return paginationClause;
 };
