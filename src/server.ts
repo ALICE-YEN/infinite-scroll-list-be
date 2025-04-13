@@ -4,6 +4,7 @@ import fastifyPostgres from "@fastify/postgres";
 import swagger from "@fastify/swagger";
 import swaggerUI from "@fastify/swagger-ui";
 import donationsRoutes from "./routes/donations";
+import categoriesRoutes from "./routes/categories";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -38,6 +39,7 @@ fastify.register(swaggerUI, {
 });
 
 fastify.register(donationsRoutes, { prefix: "/api/donations" });
+fastify.register(categoriesRoutes, { prefix: "/api/categories" });
 
 const start = async () => {
   try {
